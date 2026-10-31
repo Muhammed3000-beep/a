@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>e-Okul</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+input,select,button,textarea{font:inherit}
+.wrap{max-width:900px;margin:0 auto;padding:16px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;margin-bottom:12px}
+h1{font-size:1.4rem;margin-bottom:8px}
+h2{font-size:1.05rem;margin-bottom:10px}
+label{display:block;font-size:12px;color:#94a3b8;margin:8px 0 4px}
+input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#fff}
+button{padding:10px 14px;border-radius:8px;border:0;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;margin:4px 4px 4px 0}
+button:hover{filter:brightness(1.1)}
+button.gray{background:#475569}
+button.green{background:#16a34a}
+button.red{background:#dc2626}
+.err{background:#7f1d1d;color:#fecaca;padding:10px;border-radius:8px;margin:8px 0;display:none}
+.ok{background:#14532d;color:#bbf7d0;padding:10px;border-radius:8px;margin:8px 0;display:none}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border-bottom:1px solid #334155;padding:8px;text-align:left}
+th{color:#94a3b8;font-size:12px}
+.nav button{background:#334155}
+.nav button.on{background:#2563eb}
+.hidden{display:none!important}
+.muted{color:#94a3b8;font-size:13px;line-height:1.5}
+.stat{display:inline-block;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 14px;margin:4px}
+.stat b{display:block;font-size:1.3rem}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+(function(){
+  var KEY="EOKUL_SIMPLE_1";
+  var state={ user:null, page:"home" };
+
+  function today(){ return new Date().toISOString().slice(0,10); }
+  function uid(){ return "x"+Date.now()+"_"+Math.floor(Math.random()*9999); }
+
+  function defDB(){
+    return {
+      classes:[{id:"9A",name:"9-A"},{id:"9B",name:"9-B"},{id:"10A",name:"10-A"}],
+      staff:[
+        {id:"admin",user:"admin",pass:"admin123",role:"admin",name:"Yonetici"},
+        {id:"t1",user:"ogretmen",pass:"ogretmen123",role:"teacher",name:"Ayse Yilmaz",branch:"Matematik"}
+      ],
+      students:[
+        {id:"s1",name:"Mehmet Demir",classId:"9A",number:"101"},
+        {id:"s2",name:"Elif Kaya",classId:"9A",number:"102"},
+        {id:"s3",name:"Ali Vural",classId:"9A",number:"103"},
+        {id:"s4",name:"Zeynep Ak",classId:"9B",number:"201"},
+        {id:"s5",name:"Burak Sahin",classId:"9B",number:"202"}
+      ],
+      grades:[],
+      attendance:[],
+      notes:[]
+    };
+  }
+
+  function load(){
+    try{
+      var r=localStorage.getItem(KEY);
+      if(!r){ var d=defDB(); localStorage.setItem(KEY,JSON.stringify(d)); return d; }
+      return JSON.parse(r);
+    }catch(e){ var d2=defDB(); localStorage.setItem(KEY,JSON.stringify(d2)); return d2; }
+  }
+  function save(db){ localStorage.setItem(KEY,JSON.stringify(db)); }
+  function db(){ return load(); }
+  function clsName(id){
+    var c=db().classes.find(function(x){return x.id===id;});
+    return c?c.name:id;
+  }
+
+  function el(html){
+    var d=document.createElement("div");
+    d.innerHTML=html;
+    return d.firstElementChild || d;
+  }
+
+  function showLogin(){
+    state.user=null;
+    document.getElementById("app").innerHTML=
+      '<div class="card">'+
+      '<h1>e-Okul</h1>'+
+      '<p class="muted">Yerel calisir. Internet / Firebase gerekmez.</p>'+
+      '<div class="err" id="err"></div>'+
+      '<div class="row">'+
+      '<button type="button" id="bStaff" class="on">Yonetim / Ogretmen</button>'+
+      '<button type="button" id="bVbs" class="gray">VBS Ogrenci</button>'+
+      '</div>'+
+      '<div id="fStaff">'+
+      '<label>Kullanici adi</label><input id="u" value="admin">'+
+      '<label>Sifre</label><input id="p" type="password" value="admin123">'+
+      '<div style="margin-top:12px"><button type="button" id="goStaff">Giris yap</button></div>'+
+      '</div>'+
+      '<div id="fVbs" class="hidden">'+
+      '<label>Ad Soyad</label><input id="vn" value="Mehmet Demir">'+
+      '<label>Sinif</label><select id="vc"></select>'+
+      '<label>Numara</label><input id="vno" value="101">'+
+      '<div style="margin-top:12px"><button type="button" id="goVbs">VBS Giris</button></div>'+
+      '</div>'+
+      '<p class="muted" style="margin-top:14px">'+
+      'admin / admin123<br>ogretmen / ogretmen123<br>'+
+      'VBS: Mehmet Demir · 9-A · 101'+
+      '</p></div>';
+
+    var sel=document.getElementById("vc");
+    db().classes.forEach(function(c){
+      var o=document.createElement("option");
+      o.value=c.id; o.textContent=c.name;
+      sel.appendChild(o);
+    });
+
+    document.getElementById("bStaff").onclick=function(){
+      document.getElementById("fStaff").classList.remove("hidden");
+      document.getElementById("fVbs").classList.add("hidden");
+    };
+    document.getElementById("bVbs").onclick=function(){
+      document.getElementById("fVbs").classList.remove("hidden");
+      document.getElementById("fStaff").classList.add("hidden");
+    };
+    document.getElementById("goStaff").onclick=function(){
+      var u=document.getElementById("u").value.trim();
+      var p=document.getElementById("p").value;
+      var found=db().staff.find(function(s){return s.user===u && s.pass===p;});
+      if(!found){ var e=document.getElementById("err"); e.style.display="block"; e.textContent="Hatali kullanici/sifre"; return; }
+      state.user={id:found.id,role:found.role,name:found.name,branch:found.branch||""};
+      state.page="home";
+      render();
+    };
+    document.getElementById("goVbs").onclick=function(){
+      var name=document.getElementById("vn").value.trim().toLowerCase();
+      var cid=document.getElementById("vc").value;
+      var no=document.getElementById("vno").value.trim();
+      var found=db().students.find(function(s){
+        return s.classId===cid && String(s.number)===no && s.name.toLowerCase()===name;
+      });
+      if(!found){ var e=document.getElementById("err"); e.style.display="block"; e.textContent="Ogrenci bulunamadi"; return; }
+      state.user={id:found.id,role:"student",name:found.name,classId:found.classId,number:found.number};
+      state.page="home";
+      render();
+    };
+  }
+
+  function shell(body){
+    var nav="";
+    if(state.user.role==="admin"){
+      nav=
+        btn("home","Ozet")+
+        btn("approve","Devamsizlik onay")+
+        btn("students","Ogrenciler")+
+        btn("reset","Veriyi sifirla");
+    } else if(state.user.role==="teacher"){
+      nav=
+        btn("home","Ozet")+
+        btn("grade","Not gir")+
+        btn("att","Yoklama");
+    } else {
+      nav=
+        btn("home","Ozet / Ortalama")+
+        btn("myg","Notlarim")+
+        btn("mya","Devamsizlik");
+    }
+    document.getElementById("app").innerHTML=
+      '<div class="card row" style="justify-content:space-between">'+
+      '<div><strong>e-Okul</strong> · '+esc(state.user.name)+'</div>'+
+      '<button type="button" class="gray" id="logout">Cikis</button></div>'+
+      '<div class="card nav row">'+nav+'</div>'+
+      '<div id="main">'+body+'</div>';
+    document.getElementById("logout").onclick=showLogin;
+    document.querySelectorAll("[data-page]").forEach(function(b){
+      b.onclick=function(){ state.page=b.getAttribute("data-page"); render(); };
+    });
+  }
+  function btn(id,label){
+    return '<button type="button" data-page="'+id+'" class="'+(state.page===id?"on":"gray")+'">'+label+'</button>';
+  }
+  function esc(s){
+    return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function render(){
+    if(!state.user){ showLogin(); return; }
+    if(state.user.role==="admin") renderAdmin();
+    else if(state.user.role==="teacher") renderTeacher();
+    else renderStudent();
+  }
+
+  function renderAdmin(){
+    var d=db();
+    if(state.page==="home"){
+      shell(
+        '<div class="card">'+
+        '<span class="stat"><b>'+d.students.length+'</b>Ogrenci</span>'+
+        '<span class="stat"><b>'+d.grades.length+'</b>Not</span>'+
+        '<span class="stat"><b>'+d.attendance.filter(function(a){return a.review==="pending";}).length+'</b>Onay bekleyen</span>'+
+        '<p class="muted" style="margin-top:10px">Ogretmen not/yoklama girer. Sen yoklamayi ozurlu/ozursuz yaparsin. VBS gorur.</p></div>'
+      );
+    }
+    else if(state.page==="approve"){
+      var rows=d.attendance.filter(function(a){return a.status==="yok"||a.status==="gec";}).slice().reverse();
+      var html='<div class="card"><h2>Devamsizlik onayi</h2><table><tr><th>Tarih</th><th>Ogrenci</th><th>Durum</th><th>Sonuc</th><th></th></tr>';
+      rows.forEach(function(a){
+        var st=d.students.find(function(s){return s.id===a.studentId;});
+        var badge=a.review==="ozurlu"?"Ozurlu":a.review==="ozursuz"?"Ozursuz":"Bekliyor";
+        html+='<tr><td>'+esc(a.date)+'</td><td>'+esc(st?st.name:"?")+'</td><td>'+esc(a.status)+'</td><td>'+badge+'</td><td>'+
+          '<button type="button" class="green" data-ok="'+a.id+'">Ozurlu</button> '+
+          '<button type="button" class="red" data-no="'+a.id+'">Ozursuz</button></td></tr>';
+      });
+      if(!rows.length) html+='<tr><td colspan="5" class="muted">Kayit yok</td></tr>';
+      html+='</table></div>';
+      shell(html);
+      document.querySelectorAll("[data-ok]").forEach(function(b){
+        b.onclick=function(){ setReview(b.getAttribute("data-ok"),"ozurlu"); };
+      });
+      document.querySelectorAll("[data-no]").forEach(function(b){
+        b.onclick=function(){ setReview(b.getAttribute("data-no"),"ozursuz"); };
+      });
+    }
+    else if(state.page==="students"){
+      var html='<div class="card"><h2>Ogrenciler</h2><table><tr><th>Ad</th><th>No</th><th>Sinif</th></tr>';
+      d.students.forEach(function(s){
+        html+='<tr><td>'+esc(s.name)+'</td><td>'+esc(s.number)+'</td><td>'+esc(clsName(s.classId))+'</td></tr>';
+      });
+      html+='</table></div>';
+      shell(html);
+    }
+    else if(state.page==="reset"){
+      shell('<div class="card"><h2>Veriyi sifirla</h2><p class="muted">Demo veriye doner.</p>'+
+        '<button type="button" class="red" id="doReset">Sifirla</button></div>');
+      document.getElementById("doReset").onclick=function(){
+        if(confirm("Sifirlansin mi?")){ localStorage.setItem(KEY,JSON.stringify(defDB())); alert("Tamam"); render(); }
+      };
+    }
+  }
+
+  function setReview(id, rev){
+    var d=db();
+    var a=d.attendance.find(function(x){return x.id===id;});
+    if(a){ a.review=rev; save(d); }
+    render();
+  }
+
+  function renderTeacher(){
+    var d=db();
+    if(state.page==="home"){
+      shell('<div class="card"><h2>Merhaba '+esc(state.user.name)+'</h2>'+
+        '<p class="muted">Brans: '+esc(state.user.branch||"-")+'</p>'+
+        '<p class="muted">Not gir veya yoklama al. VBS ayni cihazda aninda gorur.</p></div>');
+    }
+    else if(state.page==="grade"){
+      var html='<div class="card"><h2>Not gir</h2>'+
+        '<label>Sinif</label><select id="gC"></select>'+
+        '<label>Ders</label><input id="gL" value="'+esc(state.user.branch||"Matematik")+'">'+
+        '<label>Tur</label><select id="gT"><option>Sozlu</option><option>Sinav</option><option>Yazili</option><option>Performans</option><option>Proje</option></select>'+
+        '<label>Tarih</label><input id="gD" type="date" value="'+today()+'">'+
+        '<div id="gList" style="margin-top:10px"></div>'+
+        '<button type="button" id="gSave">Notlari kaydet</button></div>';
+      shell(html);
+      var sel=document.getElementById("gC");
+      d.classes.forEach(function(c){ var o=document.createElement("option"); o.value=c.id; o.textContent=c.name; sel.appendChild(o); });
+      function draw(){
+        var list=d.students.filter(function(s){return s.classId===sel.value;});
+        var box=document.getElementById("gList");
+        box.innerHTML="";
+        list.forEach(function(s){
+          var row=document.createElement("div");
+          row.className="row";
+          row.style.justifyContent="space-between";
+          row.innerHTML='<span>'+esc(s.name)+' <span class="muted">#'+esc(s.number)+'</span></span>';
+          var inp=document.createElement("input");
+          inp.type="number"; inp.min="0"; inp.max="100"; inp.placeholder="not";
+          inp.style.width="90px"; inp.setAttribute("data-sid",s.id);
+          row.appendChild(inp);
+          box.appendChild(row);
+        });
+      }
+      sel.onchange=draw; draw();
+      document.getElementById("gSave").onclick=function(){
+        var lesson=document.getElementById("gL").value.trim();
+        var type=document.getElementById("gT").value;
+        var date=document.getElementById("gD").value||today();
+        if(!lesson){ alert("Ders yaz"); return; }
+        var data=db();
+        var n=0;
+        document.querySelectorAll("#gList input[data-sid]").forEach(function(inp){
+          if(inp.value===""||isNaN(Number(inp.value))) return;
+          data.grades.push({
+            id:uid(), studentId:inp.getAttribute("data-sid"),
+            lesson:lesson, type:type, score:Math.max(0,Math.min(100,Number(inp.value))),
+            date:date, teacher:state.user.name
+          });
+          n++;
+        });
+        if(!n){ alert("En az bir not yaz"); return; }
+        save(data);
+        alert(n+" not kaydedildi. VBS ile bakabilirsin.");
+        draw();
+      };
+    }
+    else if(state.page==="att"){
+      var html='<div class="card"><h2>Yoklama</h2>'+
+        '<label>Sinif</label><select id="aC"></select>'+
+        '<label>Tarih</label><input id="aD" type="date" value="'+today()+'">'+
+        '<div id="aList" style="margin-top:10px"></div>'+
+        '<button type="button" id="aSave">Yoklamayi kaydet</button></div>';
+      shell(html);
+      var sel=document.getElementById("aC");
+      d.classes.forEach(function(c){ var o=document.createElement("option"); o.value=c.id; o.textContent=c.name; sel.appendChild(o); });
+      function draw(){
+        var list=d.students.filter(function(s){return s.classId===sel.value;});
+        var box=document.getElementById("aList");
+        box.innerHTML="";
+        list.forEach(function(s){
+          var row=document.createElement("div");
+          row.className="row";
+          row.style.justifyContent="space-between";
+          row.innerHTML='<span>'+esc(s.name)+'</span>';
+          var s2=document.createElement("select");
+          s2.setAttribute("data-sid",s.id);
+          ["var","yok","gec","izinli"].forEach(function(v){
+            var o=document.createElement("option"); o.value=v; o.textContent=v; s2.appendChild(o);
+          });
+          row.appendChild(s2);
+          box.appendChild(row);
+        });
+      }
+      sel.onchange=draw; draw();
+      document.getElementById("aSave").onclick=function(){
+        var date=document.getElementById("aD").value||today();
+        var data=db();
+        document.querySelectorAll("#aList select[data-sid]").forEach(function(s){
+          var st=s.value;
+          data.attendance.push({
+            id:uid(), studentId:s.getAttribute("data-sid"), date:date, status:st,
+            review:(st==="yok"||st==="gec")?"pending":"none",
+            teacher:state.user.name
+          });
+        });
+        save(data);
+        alert("Yoklama kaydedildi. Yonetici onayina dustu.");
+      };
+    }
+  }
+
+  function renderStudent(){
+    var d=db();
+    var my=d.grades.filter(function(g){return g.studentId===state.user.id;});
+    var by={};
+    my.forEach(function(g){
+      if(!by[g.lesson]) by[g.lesson]=[];
+      by[g.lesson].push(Number(g.score));
+    });
+    var avgs=[];
+    Object.keys(by).forEach(function(k){
+      var arr=by[k];
+      var sum=0; for(var i=0;i<arr.length;i++) sum+=arr[i];
+      avgs.push({lesson:k, avg:Math.round(sum/arr.length*10)/10, n:arr.length});
+    });
+    var overall="—";
+    if(avgs.length){
+      var s=0; avgs.forEach(function(x){s+=x.avg;});
+      overall=Math.round(s/avgs.length*10)/10;
+    }
+    var myA=d.attendance.filter(function(a){return a.studentId===state.user.id;});
+
+    if(state.page==="home"){
+      var t='<div class="card">'+
+        '<span class="stat"><b>'+overall+'</b>Genel ortalama</span>'+
+        '<span class="stat"><b>'+my.length+'</b>Not</span>'+
+        '<span class="stat"><b>'+myA.filter(function(a){return a.review==="ozursuz";}).length+'</b>Ozursuz</span>'+
+        '<span class="stat"><b>'+myA.filter(function(a){return a.review==="ozurlu";}).length+'</b>Ozurlu</span>'+
+        '<p class="muted" style="margin-top:10px">'+esc(state.user.name)+' · '+esc(clsName(state.user.classId))+' · No '+esc(state.user.number)+'</p></div>'+
+        '<div class="card"><h2>Ders ortalamalari</h2><table><tr><th>Ders</th><th>Ort</th><th>Adet</th></tr>';
+      avgs.forEach(function(x){ t+='<tr><td>'+esc(x.lesson)+'</td><td><b>'+x.avg+'</b></td><td>'+x.n+'</td></tr>'; });
+      if(!avgs.length) t+='<tr><td colspan="3" class="muted">Henuz not yok</td></tr>';
+      t+='</table></div>';
+      shell(t);
+    }
+    else if(state.page==="myg"){
+      var t='<div class="card"><h2>Notlarim</h2><table><tr><th>Ders</th><th>Tur</th><th>Not</th><th>Tarih</th></tr>';
+      my.slice().reverse().forEach(function(g){
+        t+='<tr><td>'+esc(g.lesson)+'</td><td>'+esc(g.type)+'</td><td><b>'+g.score+'</b></td><td>'+esc(g.date)+'</td></tr>';
+      });
+      if(!my.length) t+='<tr><td colspan="4" class="muted">Not yok</td></tr>';
+      t+='</table></div>';
+      shell(t);
+    }
+    else if(state.page==="mya"){
+      var t='<div class="card"><h2>Devamsizlik</h2><table><tr><th>Tarih</th><th>Durum</th><th>Sonuc</th></tr>';
+      myA.slice().reverse().forEach(function(a){
+        var r=a.review==="ozurlu"?"Ozurlu":a.review==="ozursuz"?"Ozursuz":a.review==="pending"?"Onay bekliyor":a.status;
+        t+='<tr><td>'+esc(a.date)+'</td><td>'+esc(a.status)+'</td><td>'+esc(r)+'</td></tr>';
+      });
+      if(!myA.length) t+='<tr><td colspan="3" class="muted">Kayit yok</td></tr>';
+      t+='</table></div>';
+      shell(t);
+    }
+  }
+
+  showLogin();
+})();
+</script>
+</body>
+</html>
