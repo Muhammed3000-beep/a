@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>e-Okul</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b1220;--panel:#111827;--card:#1a2332;--line:#2a3548;--text:#e8eef7;--muted:#94a3b8;--p:#3b82f6;--ok:#22c55e;--d:#ef4444;--w:#f59e0b}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh}
+.hidden{display:none!important}
+#screen{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px}
+.box{width:min(460px,100%);background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px}
+h1{font-size:1.3rem;font-weight:800;margin-bottom:6px}
+.sub{color:var(--muted);font-size:.85rem;margin-bottom:14px;line-height:1.5}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:.72rem;color:var(--muted);font-weight:600;margin-bottom:5px}
+input,select,textarea,button{font:inherit}
+input,select,textarea{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:#0d1524;color:var(--text)}
+.btn{border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer;background:var(--p);color:#fff}
+.btn:disabled{opacity:.5;cursor:wait}
+.btn-block{width:100%}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.btn-ok{background:var(--ok)}.btn-d{background:var(--d)}.btn-sm{padding:7px 10px;font-size:.75rem}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tab{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--muted);font-weight:700;font-size:.8rem;cursor:pointer}
+.tab.on{background:var(--p);color:#fff;border-color:var(--p)}
+.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fca5a5;padding:10px;border-radius:10px;font-size:.8rem;margin-bottom:10px;display:none}
+.okm{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#86efac;padding:10px;border-radius:10px;font-size:.8rem;margin-bottom:10px;display:none}
+.hint{margin-top:12px;font-size:.74rem;color:var(--muted);line-height:1.55;background:#0d1524;padding:10px;border-radius:10px}
+code{color:#93c5fd}
+#app{display:none;min-height:100dvh}
+.top{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(11,18,32,.95);position:sticky;top:0;z-index:5}
+.layout{display:grid;grid-template-columns:200px 1fr;min-height:calc(100dvh - 56px)}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.nav{display:flex;flex-wrap:wrap;gap:4px;padding:8px;border-bottom:1px solid var(--line)}.nav button{width:auto!important}}
+.nav{background:var(--panel);border-right:1px solid var(--line);padding:10px}
+.nav button{display:block;width:100%;text-align:left;padding:10px;margin-bottom:4px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-weight:600;cursor:pointer}
+.nav button.on,.nav button:hover{background:#1e293b;color:#fff}
+.main{padding:16px;max-width:1000px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h2{font-size:.95rem;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat b{display:block;font-size:1.4rem}
+.stat span{font-size:.7rem;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--muted);font-size:.7rem}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.68rem;font-weight:700}
+.b1{background:rgba(34,197,94,.15);color:#86efac}.b2{background:rgba(239,68,68,.15);color:#fca5a5}.b3{background:rgba(245,158,11,.15);color:#fcd34d}
+.live{color:var(--ok);font-size:.72rem;font-weight:700}
+</style>
+</head>
+<body>
+
+<div id="screen">
+  <div class="box" id="loginBox">
+    <h1>e-Okul</h1>
+    <p class="sub" id="modeLine">Yükleniyor…</p>
+    <div class="err" id="err"></div>
+    <div class="okm" id="okm"></div>
+    <div class="tabs">
+      <button type="button" class="tab on" id="tabStaff">Yönetim / Öğretmen</button>
+      <button type="button" class="tab" id="tabVbs">VBS</button>
+    </div>
+    <form id="staffForm">
+      <div class="field"><label>Kullanıcı adı</label><input id="su" value="admin" autocomplete="username"></div>
+      <div class="field"><label>Şifre</label><input id="sp" type="password" value="admin123" autocomplete="current-password"></div>
+      <button class="btn btn-block" type="submit" id="staffBtn">Giriş yap</button>
+    </form>
+    <form id="vbsForm" class="hidden">
+      <div class="field"><label>Ad Soyad</label><input id="vn" placeholder="Mehmet Demir"></div>
+      <div class="field"><label>Sınıf</label><select id="vc"></select></div>
+      <div class="field"><label>Numara</label><input id="vno" placeholder="101"></div>
+      <button class="btn btn-block" type="submit" id="vbsBtn">VBS Giriş</button>
+    </form>
+    <div class="hint" id="hint">
+      İlk girişte yönetici menüsünden <b>Demo kur</b> çalıştır.<br>
+      admin / admin123 · ogretmen / ogretmen123<br>
+      VBS: Mehmet Demir · 9-A · 101
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="top">
+    <div><strong>e-Okul</strong> <span id="roleTag" style="color:#93c5fd;font-size:.75rem"></span></div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span class="live" id="liveTag">● Yerel</span>
+      <span id="who" style="font-size:.8rem;color:var(--muted)"></span>
+      <button type="button" class="btn btn-ghost btn-sm" id="out">Çıkış</button>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="nav" id="nav"></div>
+    <div class="main" id="main"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import {
+  getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
+  onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAnmGzhkJEfxKNcvLDRilXP-iQc3lMMLrc",
+  authDomain: "sisteym-14312.firebaseapp.com",
+  projectId: "sisteym-14312",
+  storageBucket: "sisteym-14312.firebasestorage.app",
+  messagingSenderId: "498532288088",
+  appId: "1:498532288088:web:8d47ef5533f4c9ac946c2d"
+};
+
+const LOCAL_KEY = "EOKUL_LOCAL_V2";
+const SESS = "EOKUL_SESS_V2";
+const TYPES = ["Sözlü","Sınav","Yazılı","Performans","Proje","Ödev notu"];
+
+let mode = "local"; // local | firebase
+let db = null;
+let current = null;
+let page = "home";
+let unsubs = [];
+let data = emptyData();
+
+function emptyData(){
+  return { staff:[], students:[], classes:[], grades:[], attendance:[], announcements:[] };
+}
+function defaultLocal(){
+  return {
+    staff:[
+      {id:"admin", username:"admin", pass:"admin123", role:"admin", name:"Sistem Yöneticisi"},
+      {id:"ogretmen", username:"ogretmen", pass:"ogretmen123", role:"teacher", name:"Ayşe Yılmaz", branch:"Matematik"},
+      {id:"fen", username:"fen", pass:"fen123", role:"teacher", name:"Can Öztürk", branch:"Fen"}
+    ],
+    classes:[
+      {id:"9A", name:"9-A", grade:9},
+      {id:"9B", name:"9-B", grade:9},
+      {id:"10A", name:"10-A", grade:10}
+    ],
+    students:[
+      {id:"s1", name:"Mehmet Demir", classId:"9A", number:"101"},
+      {id:"s2", name:"Elif Kaya", classId:"9A", number:"102"},
+      {id:"s3", name:"Ali Vural", classId:"9A", number:"103"},
+      {id:"s4", name:"Zeynep Ak", classId:"9B", number:"201"},
+      {id:"s5", name:"Burak Şahin", classId:"9B", number:"202"},
+      {id:"s6", name:"Deniz Yıldız", classId:"10A", number:"301"}
+    ],
+    grades:[],
+    attendance:[],
+    announcements:[{id:"n1", title:"Hoş geldiniz", text:"Yerel demo aktif. Not ve yoklama bu cihazda çalışır.", date: today()}]
+  };
+}
+
+function today(){ return new Date().toISOString().slice(0,10); }
+function uid(){ return "id_"+Math.random().toString(36).slice(2,9)+Date.now().toString(36); }
+function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+function $(id){ return document.getElementById(id); }
+function showErr(t){ const e=$("err"); e.style.display="block"; e.textContent=t; $("okm").style.display="none"; }
+function showOk(t){ const e=$("okm"); e.style.display="block"; e.textContent=t; $("err").style.display="none"; }
+function clearMsg(){ $("err").style.display="none"; $("okm").style.display="none"; }
+
+function loadLocal(){
+  try{
+    const raw=localStorage.getItem(LOCAL_KEY);
+    if(!raw){ const d=defaultLocal(); localStorage.setItem(LOCAL_KEY, JSON.stringify(d)); return d; }
+    return JSON.parse(raw);
+  }catch{ const d=defaultLocal(); localStorage.setItem(LOCAL_KEY, JSON.stringify(d)); return d; }
+}
+function saveLocal(){
+  if(mode!=="local") return;
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+}
+
+function className(id){
+  const c=data.classes.find(x=>x.id===id);
+  return c?c.name:id;
+}
+
+/* ——— Firebase optional ——— */
+async function tryFirebase(){
+  try{
+    const app=initializeApp(firebaseConfig);
+    db=getFirestore(app);
+    // test read
+    await getDocs(collection(db,"classes"));
+    mode="firebase";
+    return true;
+  }catch(e){
+    console.warn("Firebase yok / rules kapalı, yerel mod:", e.message||e);
+    mode="local";
+    db=null;
+    return false;
+  }
+}
+
+async function fbSeed(){
+  const classes=[{id:"9A",name:"9-A",grade:9},{id:"9B",name:"9-B",grade:9},{id:"10A",name:"10-A",grade:10}];
+  for(const c of classes) await setDoc(doc(db,"classes",c.id),c);
+  await setDoc(doc(db,"staff","admin"),{username:"admin",pass:"admin123",role:"admin",name:"Sistem Yöneticisi"});
+  await setDoc(doc(db,"staff","ogretmen"),{username:"ogretmen",pass:"ogretmen123",role:"teacher",name:"Ayşe Yılmaz",branch:"Matematik"});
+  await setDoc(doc(db,"staff","fen"),{username:"fen",pass:"fen123",role:"teacher",name:"Can Öztürk",branch:"Fen"});
+  const sts=[
+    {id:"s1",name:"Mehmet Demir",classId:"9A",number:"101"},
+    {id:"s2",name:"Elif Kaya",classId:"9A",number:"102"},
+    {id:"s3",name:"Ali Vural",classId:"9A",number:"103"},
+    {id:"s4",name:"Zeynep Ak",classId:"9B",number:"201"},
+    {id:"s5",name:"Burak Şahin",classId:"9B",number:"202"},
+    {id:"s6",name:"Deniz Yıldız",classId:"10A",number:"301"}
+  ];
+  for(const s of sts) await setDoc(doc(db,"students",s.id),s);
+  await addDoc(collection(db,"announcements"),{title:"Demo kuruldu",text:"Firebase anlık mod aktif.",date:today(),createdAt:serverTimestamp()});
+}
+
+function startFbListeners(){
+  unsubs.forEach(u=>{try{u()}catch{}});
+  unsubs=[];
+  const map=["students","classes","grades","attendance","announcements"];
+  map.forEach(col=>{
+    unsubs.push(onSnapshot(collection(db,col), snap=>{
+      data[col]=[];
+      snap.forEach(d=>data[col].push({id:d.id,...d.data()}));
+      if(col==="classes") data.classes.sort((a,b)=>String(a.name).localeCompare(String(b.name),"tr"));
+      if(current) render();
+      fillVbsClasses();
+    }, err=>console.warn(col,err)));
+  });
+  unsubs.push(onSnapshot(collection(db,"staff"), snap=>{
+    data.staff=[];
+    snap.forEach(d=>data.staff.push({id:d.id,...d.data()}));
+    if(current) render();
+  }));
+}
+
+/* ——— Auth ——— */
+async function loginStaff(user, pass){
+  if(mode==="firebase"){
+    const snap=await getDoc(doc(db,"staff", user));
+    if(!snap.exists()) throw new Error("Kullanıcı yok. Önce admin ile girip Demo kur.");
+    const d=snap.data();
+    if(d.pass!==pass) throw new Error("Şifre hatalı");
+    return {id:snap.id, role:d.role, name:d.name, branch:d.branch||"", username:d.username};
+  }
+  const d=data.staff.find(x=>x.username===user && x.pass===pass);
+  if(!d) throw new Error("Kullanıcı veya şifre hatalı");
+  return {id:d.id, role:d.role, name:d.name, branch:d.branch||"", username:d.username};
+}
+
+async function loginVbs(name, classId, number){
+  const n=name.trim().toLocaleLowerCase("tr-TR");
+  const list = mode==="firebase" ? data.students : data.students;
+  // ensure students loaded in firebase mode
+  if(mode==="firebase" && !list.length){
+    const snap=await getDocs(collection(db,"students"));
+    snap.forEach(d=>list.push({id:d.id,...d.data()}));
+    data.students=list;
+  }
+  const found=data.students.find(s=>
+    s.classId===classId &&
+    String(s.number)===String(number) &&
+    String(s.name||"").trim().toLocaleLowerCase("tr-TR")===n
+  );
+  if(!found) throw new Error("Öğrenci bulunamadı. Demo kurulu mu? Örnek: Mehmet Demir / 9-A / 101");
+  return {...found, role:"student"};
+}
+
+/* ——— UI ——— */
+function fillVbsClasses(){
+  const sel=$("vc");
+  if(!sel) return;
+  const rows=data.classes.length?data.classes:defaultLocal().classes;
+  sel.innerHTML=rows.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+}
+
+function goApp(){
+  $("screen").style.display="none";
+  $("app").style.display="block";
+  $("who").textContent=current.name;
+  $("roleTag").textContent=current.role==="admin"?"· Yönetim":current.role==="teacher"?"· Öğretmen":"· VBS";
+  $("liveTag").textContent=mode==="firebase"?"● Anlık Firebase":"● Yerel (bu cihaz)";
+  $("liveTag").style.color=mode==="firebase"?"#22c55e":"#f59e0b";
+  page="home";
+  renderNav();
+  render();
+}
+
+function goLogin(){
+  current=null;
+  unsubs.forEach(u=>{try{u()}catch{}});
+  unsubs=[];
+  sessionStorage.removeItem(SESS);
+  $("app").style.display="none";
+  $("screen").style.display="flex";
+  clearMsg();
+}
+
+function renderNav(){
+  const items={
+    admin:[["home","Özet"],["attAdmin","Devamsızlık onayı"],["gradesView","Notlar"],["seed","Demo kur"],["students","Öğrenciler"]],
+    teacher:[["home","Özet"],["grades","Not gir"],["att","Yoklama"]],
+    student:[["home","Özet / Ortalama"],["myG","Notlarım"],["myA","Devamsızlık"]]
+  };
+  const list=items[current.role]||[];
+  $("nav").innerHTML=list.map(([id,t])=>`<button type="button" class="${page===id?"on":""}" data-p="${id}">${t}</button>`).join("");
+  $("nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{page=b.getAttribute("data-p");renderNav();render();});
+}
+
+function render(){
+  if(!current) return;
+  if(current.role==="admin") renderAdmin();
+  else if(current.role==="teacher") renderTeacher();
+  else renderStudent();
+}
+
+async function addGradeRows(rows){
+  if(mode==="firebase"){
+    for(const r of rows) await addDoc(collection(db,"grades"), {...r, createdAt:serverTimestamp()});
+  }else{
+    rows.forEach(r=>data.grades.push({id:uid(), ...r}));
+    saveLocal();
+    render();
+  }
+}
+async function addAttRows(rows){
+  if(mode==="firebase"){
+    for(const r of rows) await addDoc(collection(db,"attendance"), {...r, createdAt:serverTimestamp()});
+  }else{
+    rows.forEach(r=>data.attendance.push({id:uid(), ...r}));
+    saveLocal();
+    render();
+  }
+}
+async function patchAtt(id, review){
+  if(mode==="firebase") await updateDoc(doc(db,"attendance",id),{review, reviewedAt:serverTimestamp()});
+  else{
+    const a=data.attendance.find(x=>x.id===id);
+    if(a) a.review=review;
+    saveLocal();
+    render();
+  }
+}
+
+function renderAdmin(){
+  const main=$("main");
+  if(page==="home"){
+    main.innerHTML=`<div class="grid">
+      <div class="stat"><b>${data.students.length}</b><span>Öğrenci</span></div>
+      <div class="stat"><b>${data.staff.filter(s=>s.role==="teacher").length}</b><span>Öğretmen</span></div>
+      <div class="stat"><b>${data.attendance.filter(a=>a.review==="pending").length}</b><span>Onay bekleyen</span></div>
+    </div>
+    <div class="card"><h2>Durum</h2>
+      <p style="color:var(--muted);font-size:.85rem">Mod: <strong style="color:#fff">${mode==="firebase"?"Firebase anlık":"Yerel (localStorage)"}</strong></p>
+      <p style="color:var(--muted);font-size:.85rem;margin-top:8px">Öğretmen not/yoklama girer → yönetici yoklamayı özürlü/özürsüz yapar → VBS görür.</p>
+    </div>`;
+  }
+  else if(page==="seed"){
+    main.innerHTML=`<div class="card"><h2>Demo veriyi kur</h2>
+      <p style="color:var(--muted);font-size:.85rem;margin-bottom:12px">Sınıf, öğrenci, admin, öğretmen örnekleri yüklenir.</p>
+      <button type="button" class="btn" id="doSeed">Demo kur</button>
+    </div>`;
+    $("doSeed").onclick=async()=>{
+      const b=$("doSeed"); b.disabled=true; b.textContent="Kuruluyor…";
+      try{
+        if(mode==="firebase") await fbSeed();
+        else{ data=defaultLocal(); saveLocal(); }
+        alert("Demo hazır.\nadmin/admin123\nogretmen/ogretmen123\nVBS: Mehmet Demir · 9-A · 101");
+        if(mode==="local") render();
+      }catch(e){ alert("Hata: "+(e.message||e)); }
+      b.disabled=false; b.textContent="Demo kur";
+    };
+  }
+  else if(page==="attAdmin"){
+    const rows=data.attendance.filter(a=>a.status==="yok"||a.status==="gec").slice().reverse();
+    main.innerHTML=`<div class="card"><h2>Devamsızlık onayı</h2>
+      <table><thead><tr><th>Tarih</th><th>Öğrenci</th><th>Durum</th><th>Sonuç</th><th></th></tr></thead><tbody>
+      ${rows.map(a=>{
+        const st=data.students.find(s=>s.id===a.studentId);
+        const rev=a.review||"pending";
+        return `<tr>
+          <td>${esc(a.date)}</td><td>${esc(st?st.name:"?")}</td><td>${esc(a.status)}</td>
+          <td>${rev==="ozurlu"?'<span class="badge b1">Özürlü</span>':rev==="ozursuz"?'<span class="badge b2">Özürsüz</span>':'<span class="badge b3">Bekliyor</span>'}</td>
+          <td>
+            <button type="button" class="btn btn-ok btn-sm" data-i="${a.id}" data-r="ozurlu">Özürlü</button>
+            <button type="button" class="btn btn-d btn-sm" data-i="${a.id}" data-r="ozursuz">Özürsüz</button>
+          </td></tr>`;
+      }).join("")||`<tr><td colspan="5" style="color:var(--muted)">Kayıt yok</td></tr>`}
+      </tbody></table></div>`;
+    main.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>patchAtt(b.getAttribute("data-i"), b.getAttribute("data-r")));
+  }
+  else if(page==="gradesView"){
+    main.innerHTML=`<div class="card"><h2>Tüm notlar</h2><table><thead><tr><th>Öğrenci</th><th>Ders</th><th>Tür</th><th>Not</th><th>Tarih</th></tr></thead><tbody>
+      ${data.grades.slice().reverse().map(g=>{
+        const st=data.students.find(s=>s.id===g.studentId);
+        return `<tr><td>${esc(st?st.name:"?")}</td><td>${esc(g.lesson)}</td><td>${esc(g.type)}</td><td><b>${g.score}</b></td><td>${esc(g.date||"")}</td></tr>`;
+      }).join("")||`<tr><td colspan="5" style="color:var(--muted)">Not yok</td></tr>`}
+    </tbody></table></div>`;
+  }
+  else if(page==="students"){
+    main.innerHTML=`<div class="card"><h2>Öğrenciler</h2><table><thead><tr><th>Ad</th><th>No</th><th>Sınıf</th></tr></thead><tbody>
+      ${data.students.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.number)}</td><td>${esc(className(s.classId))}</td></tr>`).join("")}
+    </tbody></table></div>`;
+  }
+}
+
+function renderTeacher(){
+  const main=$("main");
+  if(page==="home"){
+    main.innerHTML=`<div class="card"><h2>Merhaba ${esc(current.name)}</h2>
+      <p style="color:var(--muted);font-size:.85rem">Branş: ${esc(current.branch||"—")}. Not gir veya yoklama al — VBS tarafı güncellenir.</p></div>`;
+  }
+  else if(page==="grades"){
+    main.innerHTML=`<div class="card"><h2>Not gir</h2>
+      <div class="form">
+        <div class="field"><label>Sınıf</label><select id="gC">${data.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+        <div class="field"><label>Ders</label><input id="gL" value="${esc(current.branch||"Matematik")}"></div>
+        <div class="field"><label>Tür</label><select id="gT">${TYPES.map(t=>`<option>${t}</option>`).join("")}</select></div>
+        <div class="field"><label>Tarih</label><input id="gD" type="date" value="${today()}"></div>
+      </div>
+      <div id="gList"></div>
+      <button type="button" class="btn" id="gSave" style="margin-top:10px">Notları gönder</button>
+    </div>`;
+    const draw=()=>{
+      const cid=$("gC").value;
+      const list=data.students.filter(s=>s.classId===cid);
+      $("gList").innerHTML=list.map(s=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)">
+        <span>${esc(s.name)} <small style="color:var(--muted)">#${esc(s.number)}</small></span>
+        <input type="number" min="0" max="100" data-sid="${s.id}" placeholder="not" style="width:90px;padding:8px;border-radius:8px;border:1px solid var(--line);background:#0d1524;color:#fff">
+      </div>`).join("")||`<p style="color:var(--muted)">Öğrenci yok</p>`;
+    };
+    $("gC").onchange=draw; draw();
+    $("gSave").onclick=async()=>{
+      const lesson=$("gL").value.trim(), type=$("gT").value, date=$("gD").value||today();
+      if(!lesson) return alert("Ders adı yaz");
+      const rows=[...document.querySelectorAll("#gList input[data-sid]")].map(i=>({
+        studentId:i.getAttribute("data-sid"), score:i.value.trim()
+      })).filter(r=>r.score!==""&&!isNaN(+r.score)).map(r=>({
+        studentId:r.studentId, lesson, type, score:Math.max(0,Math.min(100,+r.score)), date,
+        teacherId:current.id, teacherName:current.name
+      }));
+      if(!rows.length) return alert("En az bir nota yaz");
+      const b=$("gSave"); b.disabled=true; b.textContent="Gönderiliyor…";
+      try{ await addGradeRows(rows); alert(rows.length+" not kaydedildi"); draw(); }
+      catch(e){ alert(e.message||e); }
+      b.disabled=false; b.textContent="Notları gönder";
+    };
+  }
+  else if(page==="att"){
+    main.innerHTML=`<div class="card"><h2>Yoklama</h2>
+      <div class="form">
+        <div class="field"><label>Sınıf</label><select id="aC">${data.classes.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+        <div class="field"><label>Tarih</label><input id="aD" type="date" value="${today()}"></div>
+      </div>
+      <div id="aList"></div>
+      <button type="button" class="btn" id="aSave" style="margin-top:10px">Kaydet</button>
+    </div>`;
+    const draw=()=>{
+      const list=data.students.filter(s=>s.classId===$("aC").value);
+      $("aList").innerHTML=list.map(s=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)">
+        <span>${esc(s.name)}</span>
+        <select data-sid="${s.id}" style="padding:6px;border-radius:8px;background:#0d1524;color:#fff;border:1px solid var(--line)">
+          <option value="var">Var</option><option value="yok">Yok</option><option value="gec">Geç</option><option value="izinli">İzinli</option>
+        </select></div>`).join("");
+    };
+    $("aC").onchange=draw; draw();
+    $("aSave").onclick=async()=>{
+      const date=$("aD").value||today();
+      const rows=[...document.querySelectorAll("#aList select")].map(s=>({
+        studentId:s.getAttribute("data-sid"), date, status:s.value,
+        review:(s.value==="yok"||s.value==="gec")?"pending":"none",
+        teacherId:current.id, teacherName:current.name
+      }));
+      const b=$("aSave"); b.disabled=true;
+      try{ await addAttRows(rows); alert("Yoklama kaydedildi"); }
+      catch(e){ alert(e.message||e); }
+      b.disabled=false;
+    };
+  }
+}
+
+function renderStudent(){
+  const main=$("main");
+  const myG=data.grades.filter(g=>g.studentId===current.id);
+  const by={};
+  myG.forEach(g=>{ const k=g.lesson||"?"; (by[k]=by[k]||[]).push(+g.score); });
+  const avgs=Object.entries(by).map(([lesson,arr])=>({lesson, avg:Math.round(arr.reduce((a,b)=>a+b,0)/arr.length*10)/10, n:arr.length}));
+  const overall=avgs.length?Math.round(avgs.reduce((s,x)=>s+x.avg,0)/avgs.length*10)/10:"—";
+  const myA=data.attendance.filter(a=>a.studentId===current.id);
+
+  if(page==="home"){
+    main.innerHTML=`<div class="grid">
+      <div class="stat"><b>${overall}</b><span>Genel ortalama</span></div>
+      <div class="stat"><b>${myG.length}</b><span>Not</span></div>
+      <div class="stat"><b>${myA.filter(a=>a.review==="ozursuz").length}</b><span>Özürsüz</span></div>
+      <div class="stat"><b>${myA.filter(a=>a.review==="ozurlu").length}</b><span>Özürlü</span></div>
+    </div>
+    <div class="card"><h2>${esc(current.name)}</h2>
+      <p style="color:var(--muted);font-size:.85rem">${esc(className(current.classId))} · No ${esc(current.number)}</p>
+    </div>
+    <div class="card"><h2>Ders ortalamaları</h2>
+      <table><thead><tr><th>Ders</th><th>Ort.</th><th>Adet</th></tr></thead><tbody>
+      ${avgs.map(x=>`<tr><td>${esc(x.lesson)}</td><td><b>${x.avg}</b></td><td>${x.n}</td></tr>`).join("")||`<tr><td colspan="3" style="color:var(--muted)">Not yok</td></tr>`}
+      </tbody></table>
+    </div>`;
+  }
+  else if(page==="myG"){
+    main.innerHTML=`<div class="card"><h2>Notlarım</h2><table><thead><tr><th>Ders</th><th>Tür</th><th>Not</th><th>Tarih</th></tr></thead><tbody>
+      ${myG.slice().reverse().map(g=>`<tr><td>${esc(g.lesson)}</td><td>${esc(g.type)}</td><td><b>${g.score}</b></td><td>${esc(g.date||"")}</td></tr>`).join("")||`<tr><td colspan="4" style="color:var(--muted)">Yok</td></tr>`}
+    </tbody></table></div>`;
+  }
+  else if(page==="myA"){
+    main.innerHTML=`<div class="card"><h2>Devamsızlık</h2><table><thead><tr><th>Tarih</th><th>Durum</th><th>Sonuç</th></tr></thead><tbody>
+      ${myA.slice().reverse().map(a=>{
+        let b=esc(a.status);
+        if(a.review==="ozurlu") b='<span class="badge b1">Özürlü</span>';
+        if(a.review==="ozursuz") b='<span class="badge b2">Özürsüz</span>';
+        if(a.review==="pending") b='<span class="badge b3">Onay bekliyor</span>';
+        return `<tr><td>${esc(a.date)}</td><td>${esc(a.status)}</td><td>${b}</td></tr>`;
+      }).join("")||`<tr><td colspan="3" style="color:var(--muted)">Yok</td></tr>`}
+    </tbody></table></div>`;
+  }
+}
+
+/* events */
+$("tabStaff").onclick=()=>{
+  $("tabStaff").classList.add("on"); $("tabVbs").classList.remove("on");
+  $("staffForm").classList.remove("hidden"); $("vbsForm").classList.add("hidden"); clearMsg();
+};
+$("tabVbs").onclick=()=>{
+  $("tabVbs").classList.add("on"); $("tabStaff").classList.remove("on");
+  $("vbsForm").classList.remove("hidden"); $("staffForm").classList.add("hidden"); clearMsg();
+  fillVbsClasses();
+};
+$("staffForm").onsubmit=async e=>{
+  e.preventDefault(); clearMsg();
+  const b=$("staffBtn"); b.disabled=true;
+  try{
+    current=await loginStaff($("su").value.trim(), $("sp").value);
+    sessionStorage.setItem(SESS, JSON.stringify(current));
+    if(mode==="firebase") startFbListeners();
+    goApp();
+  }catch(err){ showErr(err.message||String(err)); }
+  b.disabled=false;
+};
+$("vbsForm").onsubmit=async e=>{
+  e.preventDefault(); clearMsg();
+  const b=$("vbsBtn"); b.disabled=true;
+  try{
+    current=await loginVbs($("vn").value, $("vc").value, $("vno").value.trim());
+    sessionStorage.setItem(SESS, JSON.stringify(current));
+    if(mode==="firebase") startFbListeners();
+    goApp();
+  }catch(err){ showErr(err.message||String(err)); }
+  b.disabled=false;
+};
+$("out").onclick=goLogin;
+
+/* boot */
+(async function(){
+  $("modeLine").textContent="Bağlantı kontrol ediliyor…";
+  data=loadLocal();
+  fillVbsClasses();
+  const ok=await tryFirebase();
+  if(ok){
+    $("modeLine").textContent="Firebase bağlı · anlık mod";
+    // pull once for login dropdown
+    try{
+      const cs=await getDocs(collection(db,"classes"));
+      if(!cs.empty){ data.classes=[]; cs.forEach(d=>data.classes.push({id:d.id,...d.data()})); fillVbsClasses(); }
+      const ss=await getDocs(collection(db,"students"));
+      if(!ss.empty){ data.students=[]; ss.forEach(d=>data.students.push({id:d.id,...d.data()})); }
+      const st=await getDocs(collection(db,"staff"));
+      if(!st.empty){ data.staff=[]; st.forEach(d=>data.staff.push({id:d.id,...d.data()})); }
+    }catch(e){ console.warn(e); }
+  }else{
+    $("modeLine").textContent="Yerel mod (Firebase rules/izin yok). Bu cihazda çalışır.";
+    showOk("Firebase açılamadı → yerel demo ile devam. Butonlar bu modda çalışır.");
+  }
+  const s=sessionStorage.getItem(SESS);
+  if(s){
+    try{
+      current=JSON.parse(s);
+      if(mode==="firebase") startFbListeners();
+      goApp();
+    }catch{ goLogin(); }
+  }
+})();
+</script>
+</body>
+</html>
